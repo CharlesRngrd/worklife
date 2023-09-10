@@ -1,11 +1,11 @@
 from functools import lru_cache
 from typing import Iterator
 
-from sqlalchemy.orm import Session
+from app.core.config import settings
 
 from fastapi_utils.session import FastAPISessionMaker
 
-from app.core.config import settings
+from sqlalchemy.orm import Session
 
 
 def get_db() -> Iterator[Session]:

@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     SQLALCHEMY_DATABASE_URI: Optional[PostgresDsn]
 
     @validator("SQLALCHEMY_DATABASE_URI", pre=True)
-    def database_uri(cls, val, values):
+    def database_uri(cls, val, values: dict):
         if isinstance(val, str):
             return val
         return PostgresDsn.build(

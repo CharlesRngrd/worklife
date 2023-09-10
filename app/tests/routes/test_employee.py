@@ -1,46 +1,16 @@
-from app.api import add_app_routes
-from app.db.session import get_db
-from app.main import app
-from app.model.employee import EmployeeModel
-
-from fastapi.testclient import TestClient
+from functools import wraps
 
 import pytest
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from .setup import setup_environment
 
-# TODO: Use a test DB for testing.
-engine = create_engine(
-    "postgresql://dev:dev@worklife-test-db:5432/dev",
-    poolclass=StaticPool,
-)
-
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-EmployeeModel.metadata.create_all(bind=engine)
-
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
-
-add_app_routes(app)
-
-client = TestClient(app)
+client = setup_environment()
 
 
 class TestEmployee:
     @pytest.fixture
     def employees(self):
-        return [
+        return (
             {
                 "first_name": "Bill",
                 "last_name": "XXX",
@@ -53,11 +23,11 @@ class TestEmployee:
                 "first_name": "Brad",
                 "last_name": "XXX",
             },
-        ]
+        )
 
     @pytest.fixture
     def wrong_employees(self):
-        return [
+        return (
             # Missing "first_name".
             {
                 "last_name": "XXX",
@@ -72,30 +42,42 @@ class TestEmployee:
                 "first_name": "Brad",
                 "last_name": "XXX",
             },
-        ]
+        )
 
+    # TODO: Switch this to a decorator.
+    def insert_employees(self, employees):
+        return [client.post("/employee", json=employee).json() for employee in employees]
+
+    def delete_employees(function):
+        @wraps(function)
+        def wrag_function(*args, **kwargs):
+            response = client.get("/employee/all")
+            if response.status_code == 200:
+                for employee in response.json():
+                    client.delete(f"/employee/{employee['id']}")
+            function(*args, **kwargs)
+
+        return wrag_function
+
+    @delete_employees
     def test_wrong_route_parameter(self, employees):
+        """It should return 404 if employee doesn't exist."""
         wrong_uuid = "f7833f1e-5537-4080-87e9-0efcff339308"
 
-        responses = [
+        responses = (
             client.get("/employee/all"),
             client.get(f"/employee/{wrong_uuid}"),
             client.delete(f"/employee/{wrong_uuid}"),
             client.put(f"/employee/{wrong_uuid}", json=employees[0]),
-        ]
+        )
 
         for response in responses:
             assert response.status_code == 404
             assert response.json()["detail"] == "Item not found"
 
-    def test_employee(self, employees):
-        self._test_create_employee(employees)
-        self._test_get_employees(employees)
-        self._test_get_employee(employees)
-        self._test_update_employee(employees)
-        self._test_delete_employee(employees)
-
-    def _test_create_employee(self, employees):
+    @delete_employees
+    def test_create_employee(self, employees):
+        """It should create an employee."""
         for index, employee in enumerate(employees):
             response = client.post("/employee", json=employee)
 
@@ -107,32 +89,46 @@ class TestEmployee:
             for key in ("first_name", "last_name"):
                 assert response.json()[key] == employees[index][key]
 
-    def _test_get_employees(self, employees):
+    @delete_employees
+    def test_get_employees(self, employees):
+        """It should retrieve all the employees."""
+        employees = self.insert_employees(employees)
+
         response = client.get("/employee/all")
 
         assert response.status_code == 200
         assert response.json() == employees
 
-    def _test_get_employee(self, employees):
+    @delete_employees
+    def test_get_employee(self, employees):
+        """It should retrieve a single employee."""
+        employees = self.insert_employees(employees)
+
         for employe in employees:
             response = client.get(f"/employee/{employe['id']}")
 
             assert response.status_code == 200
             assert response.json() == employe
 
-    def _test_update_employee(self, employees):
-        employee = client.get(f"/employee/{employees[0]['id']}").json()
+    @delete_employees
+    def test_update_employee(self, employees):
+        """It should update an employee."""
+        employees = self.insert_employees(employees)
 
-        employee["first_name"] += "_updated"
-        employee_json = employee.copy()
+        employees[0]["first_name"] += "_updated"
+        employee_json = employees[0].copy()
         employee_json.pop("id")
 
         response = client.put(f"/employee/{employees[0]['id']}", json=employee_json)
 
         assert response.status_code == 200
-        assert response.json() == employee
+        assert response.json() == employees[0]
 
-    def _test_delete_employee(self, employees):
+    @delete_employees
+    def test_delete_employee(self, employees):
+        """It should delete an employee."""
+        employees = self.insert_employees(employees)
+
         for employe in employees:
             response = client.get(f"/employee/{employe['id']}")
             assert response.status_code == 200
@@ -143,7 +139,9 @@ class TestEmployee:
             response = client.get(f"/employee/{employe['id']}")
             assert response.status_code == 404
 
+    @delete_employees
     def test_wrong_data(self, wrong_employees):
+        """It should not create an employee with wrong input."""
         for employee in wrong_employees:
             response = client.post("/employee", json=employee)
 

@@ -33,7 +33,7 @@ class VacationBase(sqlalchemy_to_pydantic(VacationModel)):
     @staticmethod
     def _check_duration(duration):
         if duration < 1:
-            raise HTTPException(status_code=404, detail="Start date should be before end date")
+            raise HTTPException(status_code=422, detail="Start date should be before end date")
 
     @root_validator
     def validate_vacation(cls, values):

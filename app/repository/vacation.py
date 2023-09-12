@@ -25,7 +25,7 @@ class _VacationRepository(BaseRepository):
         overlap_error = overlaps and any([overlap.type != obj_in.type for overlap in overlaps])
         if overlap_error:
             raise HTTPException(
-                status_code=400, detail="Vacation overlaps cannot be merged if types are different"
+                status_code=422, detail="Vacation overlaps cannot be merged if types are different"
             )
 
         # Step 4: Return overlaps that can be merged.

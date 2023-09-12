@@ -11,7 +11,7 @@ client = setup_environment()
 
 
 class TestVacation:
-    EMPLOYEE_UUID = None
+    EMPLOYEE_ID = None
 
     @classmethod
     def setup_class(cls):
@@ -19,25 +19,25 @@ class TestVacation:
             "first_name": "Bill",
             "last_name": "XXX",
         }
-        cls.EMPLOYEE_UUID = client.post("/employee", json=employee).json()["id"]
+        cls.EMPLOYEE_ID = client.post("/employee", json=employee).json()["id"]
 
     @pytest.fixture
     def vacations(self):
         return [
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-11",
                 "date_end": "2023-09-13",
             },
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-18",
                 "date_end": "2023-09-20",
             },
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-25",
                 "date_end": "2023-09-27",
@@ -48,13 +48,13 @@ class TestVacation:
     def vacations_extra(self):
         return [
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2024-09-11",
                 "date_end": "2024-09-13",
             },
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2024-09-18",
                 "date_end": "2024-09-20",
@@ -66,21 +66,21 @@ class TestVacation:
         return [
             # Overlap left.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2023-09-08",
                 "date_end": "2023-09-11",
             },
             # Overlap right.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2023-09-19",
                 "date_end": "2023-09-22",
             },
             # Overlap both.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2023-09-22",
                 "date_end": "2023-09-28",
@@ -92,21 +92,21 @@ class TestVacation:
         return [
             # Overlap left.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-08",
                 "date_end": "2023-09-11",
             },
             # Overlap right.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-19",
                 "date_end": "2023-09-22",
             },
             # Overlap both.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-22",
                 "date_end": "2023-09-28",
@@ -117,7 +117,7 @@ class TestVacation:
     def vacation_employee_not_exists(self):
         return [
             {
-                "employee_uuid": "f7833f1e-5537-4080-87e9-0efcff339308",
+                "employee_id": "f7833f1e-5537-4080-87e9-0efcff339308",
                 "type": "paid",
                 "date_start": "2023-09-11",
                 "date_end": "2023-09-13",
@@ -128,7 +128,7 @@ class TestVacation:
     def vacation_negative_duration(self):
         return [
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-13",
                 "date_end": "2023-09-11",
@@ -177,7 +177,7 @@ class TestVacation:
 
             vacation["id"] = response.json()["id"]
 
-            for key in ("employee_uuid", "type", "date_start", "date_end"):
+            for key in ("employee_id", "type", "date_start", "date_end"):
                 assert response.json()[key] == vacations[index][key]
 
             assert response.json()["duration"] == 2

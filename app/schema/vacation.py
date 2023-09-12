@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 from app.model.vacation import VacationModel
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from pydantic import root_validator
 
@@ -33,7 +33,10 @@ class VacationBase(sqlalchemy_to_pydantic(VacationModel)):
     @staticmethod
     def _check_duration(duration):
         if duration < 1:
-            raise HTTPException(status_code=422, detail="Start date should be before end date")
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Start date should be before end date",
+            )
 
     @root_validator
     def validate_vacation(cls, values):

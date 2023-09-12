@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml poetry.lock ./
 
 RUN poetry config virtualenvs.create false \
-    && poetry install && echo "Success"
+    && poetry add httpx && poetry install && echo "Success"
 
 ENV PATH=/root/.local/bin:$PATH
 EXPOSE 80

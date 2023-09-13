@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from sqlalchemy.orm.query import Query
 from sqlalchemy.orm.session import Session
@@ -15,7 +15,7 @@ class BaseRepository:
         objs: Query = session.query(self.model).filter(*filters)
 
         if not objs.count():
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
         return objs
 

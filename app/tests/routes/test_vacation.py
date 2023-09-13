@@ -11,7 +11,7 @@ client = setup_environment()
 
 
 class TestVacation:
-    EMPLOYEE_UUID = None
+    EMPLOYEE_ID = None
 
     @classmethod
     def setup_class(cls):
@@ -19,25 +19,25 @@ class TestVacation:
             "first_name": "Bill",
             "last_name": "XXX",
         }
-        cls.EMPLOYEE_UUID = client.post("/employee", json=employee).json()["id"]
+        cls.EMPLOYEE_ID = client.post("/employee", json=employee).json()["id"]
 
     @pytest.fixture
     def vacations(self):
         return [
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-11",
                 "date_end": "2023-09-13",
             },
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-18",
                 "date_end": "2023-09-20",
             },
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-25",
                 "date_end": "2023-09-27",
@@ -48,13 +48,13 @@ class TestVacation:
     def vacations_extra(self):
         return [
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2024-09-11",
                 "date_end": "2024-09-13",
             },
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2024-09-18",
                 "date_end": "2024-09-20",
@@ -66,21 +66,21 @@ class TestVacation:
         return [
             # Overlap left.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2023-09-08",
                 "date_end": "2023-09-11",
             },
             # Overlap right.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2023-09-19",
                 "date_end": "2023-09-22",
             },
             # Overlap both.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "unpaid",
                 "date_start": "2023-09-22",
                 "date_end": "2023-09-28",
@@ -92,21 +92,21 @@ class TestVacation:
         return [
             # Overlap left.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-08",
                 "date_end": "2023-09-11",
             },
             # Overlap right.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-19",
                 "date_end": "2023-09-22",
             },
             # Overlap both.
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-22",
                 "date_end": "2023-09-28",
@@ -117,7 +117,7 @@ class TestVacation:
     def vacation_employee_not_exists(self):
         return [
             {
-                "employee_uuid": "f7833f1e-5537-4080-87e9-0efcff339308",
+                "employee_id": "f7833f1e-5537-4080-87e9-0efcff339308",
                 "type": "paid",
                 "date_start": "2023-09-11",
                 "date_end": "2023-09-13",
@@ -128,7 +128,7 @@ class TestVacation:
     def vacation_negative_duration(self):
         return [
             {
-                "employee_uuid": self.EMPLOYEE_UUID,
+                "employee_id": self.EMPLOYEE_ID,
                 "type": "paid",
                 "date_start": "2023-09-13",
                 "date_end": "2023-09-11",
@@ -177,7 +177,7 @@ class TestVacation:
 
             vacation["id"] = response.json()["id"]
 
-            for key in ("employee_uuid", "type", "date_start", "date_end"):
+            for key in ("employee_id", "type", "date_start", "date_end"):
                 assert response.json()[key] == vacations[index][key]
 
             assert response.json()["duration"] == 2
@@ -255,14 +255,16 @@ class TestVacation:
             response = client.get(f"/vacation/{employe['id']}")
             assert response.status_code == 404
 
-    @pytest.mark.skip(reason="API works but not the test")
     @delete_vacation
     def test_vacation_employee_not_exists(self, vacation_employee_not_exists):
         """It should not create or update a vacation if the related employee doesn't exist."""
-        response = client.post("/vacation", json=vacation_employee_not_exists)
+        response = client.post("/vacation", json=vacation_employee_not_exists[0])
 
         assert response.status_code == 404
         assert response.json() == {"detail": "Employee doesn't exist"}
+
+        response = client.get("/vacation/all")
+        assert response.status_code == 404
 
     def test_last_business_day(self):
         """It should return the last business if date is a weekend day."""
@@ -294,41 +296,51 @@ class TestVacation:
         for date in dates:
             assert VacationBase._get_next_business_day(date[0]) == date[1]
 
-    @pytest.mark.skip(reason="API works but not the test")
+    @pytest.mark.skip(reason="Error raised but vacation inserted anyway")
     @delete_vacation
     def test_vacation_negative_duration(self, vacation_negative_duration):
         """It should not create a vacation if the end if before the begining."""
-        response = client.post("/vacation", json=vacation_negative_duration)
+        response = client.post("/vacation", json=vacation_negative_duration[0])
 
-        assert response.status_code == 404
+        assert response.status_code == 422
         assert response.json() == {"detail": "Start date should be before end date"}
 
-    @delete_vacation
-    def test_vacation_overlaps(self, vacations, vacation_overlaps_diff_type):
-        """It should not create or update a vacation if there is an overlap."""
-        for _, vacation in enumerate(vacations):
-            response = client.post("/vacation", json=vacation)
-
-        for vacation_overlap in vacation_overlaps_diff_type:
-            response = client.post("/vacation", json=vacation_overlap)
-
-            assert response.status_code == 400
-            assert response.json() == {
-                "detail": "Vacation overlaps cannot be merged if types are different"
-            }
+        response = client.get("/vacation/all")
+        assert response.status_code == 404
 
     @delete_vacation
     def test_vacation_overlaps_diff_type(self, vacations, vacation_overlaps_diff_type):
-        """It should not create or update a vacation if there is an overlap of distinct type."""
+        """It should not create a vacation if there is an overlap of distinct type."""
         vacations = self.insert_vacations(vacations)
 
+        count = len(client.get("/vacation/all").json())
         for vacation_overlap in vacation_overlaps_diff_type:
             response = client.post("/vacation", json=vacation_overlap)
 
-            assert response.status_code == 400
+            assert response.status_code == 422
             assert response.json() == {
                 "detail": "Vacation overlaps cannot be merged if types are different"
             }
+            assert count == len(client.get("/vacation/all").json())
+
+    @delete_vacation
+    def test_vacation_overlaps_diff_type_update(self, vacations):
+        """It should not update a vacation if there is an overlap of distinct type."""
+        vacations = self.insert_vacations(vacations)
+
+        count = len(client.get("/vacation/all").json())
+
+        vacation_update = vacations[0].copy()
+        vacation_update["date_end"] = "2023-09-19"
+        vacation_update["type"] = "unpaid"
+
+        response = client.put(f"/vacation/{vacation_update.pop('id')}", json=vacation_update)
+
+        assert response.status_code == 422
+        assert response.json() == {
+            "detail": "Vacation overlaps cannot be merged if types are different"
+        }
+        assert count == len(client.get("/vacation/all").json())
 
     @delete_vacation
     def test_vacation_overlaps_same_type(self, vacations, vacation_overlaps_same_type):

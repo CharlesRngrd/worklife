@@ -18,14 +18,14 @@ class _VacationRepository(BaseRepository):
 
         # Step 2: Query overlaps.
         overlaps = session.query(self.model).filter(
-            sa.and_(condition_overlap, self.model.employee_uuid == obj_in.employee_uuid)
+            sa.and_(condition_overlap, self.model.employee_id == obj_in.employee_id)
         )
 
         # Step 3: Check overlap errors.
         overlap_error = overlaps and any([overlap.type != obj_in.type for overlap in overlaps])
         if overlap_error:
             raise HTTPException(
-                status_code=400, detail="Vacation overlaps cannot be merged if types are different"
+                status_code=422, detail="Vacation overlaps cannot be merged if types are different"
             )
 
         # Step 4: Return overlaps that can be merged.
@@ -42,7 +42,7 @@ class _VacationRepository(BaseRepository):
 
     def create(self, session, obj_in):
         # Step 1: Check employee exists.
-        EmployeeRepository.check_employee_exists(session, obj_in.employee_uuid)
+        EmployeeRepository.check_employee_exists(session, obj_in.employee_id)
 
         # Step 2: Check if overlaps.
         overlaps = self._check_overlaps(session, obj_in).all()
@@ -67,7 +67,7 @@ class _VacationRepository(BaseRepository):
             update_filter = self.model.id != id
 
         # Step 1: Check employee exists.
-        EmployeeRepository.check_employee_exists(session, obj_in.employee_uuid)
+        EmployeeRepository.check_employee_exists(session, obj_in.employee_id)
 
         # Step 2: Check if overlaps.
         overlaps = self._check_overlaps(session, obj_in).filter(update_filter).all()

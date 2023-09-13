@@ -13,7 +13,7 @@ class VacationTypes(Enum):
 
 class VacationModel(BaseModel):
     __tablename__ = "vacation"
-    employee_uuid = sa.Column(
+    employee_id = sa.Column(
         CustomUUID(as_uuid=True), sa.ForeignKey(EmployeeModel.id, ondelete="CASCADE")
     )
     type = sa.Column(sa.Enum(VacationTypes), nullable=False)
